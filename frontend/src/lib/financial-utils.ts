@@ -66,6 +66,11 @@ export function computeMonthlyData(
     });
 }
 
+export function formatMonthRange(data: MonthlyDataPoint[]): string {
+  if (data.length === 0) return "No data";
+  return `${data[0].month} - ${data[data.length - 1].month}`;
+}
+
 export function formatCurrency(value: number): string {
   return new Intl.NumberFormat("en-US", {
     style: "currency",

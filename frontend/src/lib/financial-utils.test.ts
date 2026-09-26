@@ -4,6 +4,7 @@ import {
   computeKPIs,
   computeMonthlyData,
   formatCurrency,
+  formatMonthRange,
   formatPercent,
 } from "./financial-utils";
 import type { FinancialMovement } from "./financial-types";
@@ -100,6 +101,35 @@ describe("computeMonthlyData", () => {
       outcome: 0,
       profitPercent: 100,
     });
+  });
+});
+
+describe("formatMonthRange", () => {
+  it("uses the first and last months present in the data", () => {
+    const movements: FinancialMovement[] = [
+      {
+        create_date: "2026-01-08",
+        amount: 300,
+        operation_type: "income",
+        category: "sales",
+        business_type: "B2C",
+      },
+      {
+        create_date: "2025-12-05",
+        amount: 200,
+        operation_type: "outcome",
+        category: "operational",
+        business_type: "B2B",
+      },
+    ];
+
+    expect(formatMonthRange(computeMonthlyData(movements))).toBe(
+      "Dec 2025 - Jan 2026",
+    );
+  });
+
+  it("returns a fallback when there are no data points", () => {
+    expect(formatMonthRange([])).toBe("No data");
   });
 });
 
