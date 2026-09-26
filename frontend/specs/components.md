@@ -103,10 +103,12 @@ interface AnomalyAlertsTableProps {
   /** Threshold the `alerts` were fetched with; used in the empty-state message. */
   threshold: number
   loading?: boolean
+  /** Rendered in the card header (`CardAction`); App passes `AlertThresholdInput`. */
+  controls?: ReactNode
 }
 ```
 
-- Wrapped in `Card` with title **Spending anomalies**; the `AlertThresholdInput` is rendered by the parent in the card header area (passed as a sibling, not a prop, to keep the table presentational).
+- Wrapped in `Card` with title **Spending anomalies**; the threshold input is injected through `controls`, so the table stays presentational and owns no threshold state.
 - Columns (in order), mapped from `AlertEntry`:
 
 | Header | Source | Format |

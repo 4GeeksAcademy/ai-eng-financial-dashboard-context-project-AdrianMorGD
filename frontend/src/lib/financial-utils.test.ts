@@ -4,13 +4,17 @@ import {
   computeKPIs,
   computeMonthlyData,
   formatCurrency,
+  formatIncreaseRatio,
   formatISODate,
   formatMonthRange,
   formatPercent,
+  formatPeriodLabel,
   parseISODate,
+  parseThreshold,
   validateDateRange,
+  buildBusinessLineSummary,
 } from "./financial-utils";
-import type { FacetsResponse, FinancialMovement } from "./financial-types";
+import type { BusinessType, FacetsResponse, FinancialMovement, TopCategoriesResponse } from "./financial-types";
 
 const sampleMovements: FinancialMovement[] = [
   {
@@ -220,5 +224,80 @@ describe("validateDateRange", () => {
 describe("formatISODate", () => {
   it("formats without shifting the day across timezones", () => {
     expect(formatISODate("2025-09-02")).toBe("Sep 2, 2025");
+  });
+});
+
+describe("parseThreshold", () => {
+  it.each([
+    ["0.01", 0.01],
+    ["0.3", 0.3],
+    ["1", 1],
+    ["1.0", 1],
+  ])("accepts %j", (value, expected) => {
+    expect(parseThreshold(value)).toBe(expected);
+  });
+
+  it.each(["", " ", "0", "0.009", "1.01", "-0.3", "abc", "30"])(
+    "rejects %j",
+    (value) => {
+      expect(parseThreshold(value)).toBeUndefined();
+    },
+  );
+});
+
+describe("formatIncreaseRatio", () => {
+  it("converts a ratio to a signed percentage", () => {
+    expect(formatIncreaseRatio(0.7353)).toBe("+73.5%");
+    expect(formatIncreaseRatio(0.3)).toBe("+30.0%");
+  });
+});
+
+describe("formatPeriodLabel", () => {
+  it("formats a YYYY-MM period as short month and year", () => {
+    expect(formatPeriodLabel("2025-12")).toBe("Dec 2025");
+  });
+});
+
+describe("buildBusinessLineSummary", () => {
+  const entries: TopCategoriesResponse = [
+    { category: "sales", operation_type: "income", total_amount: 100 },
+    { category: "others", operation_type: "income", total_amount: 100 },
+  ];
+
+  const facets: FacetsResponse = {
+    operation_types: ["income", "outcome"],
+    business_types: ["B2B", "B2C"],
+    categories: ["sales", "others"],
+    categories_by_business_type: {
+      B2B: { income: ["sales", "others", "administrative"] },
+    },
+    min_date: "2025-01-01",
+    max_date: "2025-12-31",
+  };
+
+  it("keeps zero-income categories from facets", () => {
+    const summary = buildBusinessLineSummary("B2B", entries, facets);
+    expect(summary.total_income).toBe(200);
+    expect(summary.rows.find((row) => row.category === "administrative")).toEqual({
+      category: "administrative",
+      total_amount: 0,
+      share_pct: 0,
+    });
+  });
+
+  it("returns null shares when total income is zero", () => {
+    const summary = buildBusinessLineSummary("B2B", [], facets);
+    expect(summary.total_income).toBe(0);
+    expect(summary.rows.every((row) => row.share_pct === null)).toBe(true);
+  });
+
+  it("uses category name as the tie breaker", () => {
+    const summary = buildBusinessLineSummary("B2B", entries, null);
+    expect(summary.rows.map((row) => row.category)).toEqual(["others", "sales"]);
+  });
+
+  it("falls back to categories in entries without facets", () => {
+    const summary = buildBusinessLineSummary("B2C" as BusinessType, entries, null);
+    expect(summary.rows.map((row) => row.category)).toEqual(["others", "sales"]);
   });
 });
