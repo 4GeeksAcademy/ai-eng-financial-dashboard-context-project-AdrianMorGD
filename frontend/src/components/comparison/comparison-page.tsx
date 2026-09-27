@@ -23,8 +23,12 @@ export function ComparisonPage({ dateRange, facets, facetsLoading, onDateRangeCh
 
   useEffect(() => {
     const controller = new AbortController();
+    const selectedDateRange: DateRangeValue = {
+      start_date: dateRange.start_date,
+      end_date: dateRange.end_date,
+    };
     Promise.allSettled(BUSINESS_TYPES.map(async (businessType) => {
-      const response = await fetchTopCategories({ operation_type: "income", limit: 5, business_type: businessType, ...dateRange }, controller.signal);
+      const response = await fetchTopCategories({ operation_type: "income", limit: 5, business_type: businessType, ...selectedDateRange }, controller.signal);
       return [businessType, response] as const;
     }))
       .then((results) => {
@@ -49,7 +53,7 @@ export function ComparisonPage({ dateRange, facets, facetsLoading, onDateRangeCh
         }
       });
     return () => controller.abort();
-  }, [dateRange, queryKey]);
+  }, [queryKey, dateRange.start_date, dateRange.end_date]);
 
   const summaries: Partial<Record<BusinessType, BusinessLineSummary>> = {};
   for (const businessType of BUSINESS_TYPES) {

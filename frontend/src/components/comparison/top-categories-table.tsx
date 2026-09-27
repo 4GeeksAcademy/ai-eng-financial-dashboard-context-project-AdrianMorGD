@@ -20,11 +20,12 @@ export function TopCategoriesTable({ businessType, summary, loading }: TopCatego
       </CardHeader>
       <CardContent>
         <table className="w-full text-sm">
+          <caption className="sr-only">Top income categories for {businessType}</caption>
           <thead>
             <tr className="border-b border-border text-left text-xs text-muted-foreground">
-              <th className="py-2">Category</th>
-              <th className="py-2 text-right">Income</th>
-              <th className="py-2 text-right">% of {businessType}</th>
+              <th scope="col" className="py-2">Category</th>
+              <th scope="col" className="py-2 text-right">Income</th>
+              <th scope="col" className="py-2 text-right">% of {businessType}</th>
             </tr>
           </thead>
           <tbody>
@@ -36,7 +37,7 @@ export function TopCategoriesTable({ businessType, summary, loading }: TopCatego
               <tr><td colSpan={3} className="py-8 text-center text-muted-foreground">No income categories for {businessType}.</td></tr>
             ) : summary.rows.map((row) => (
               <tr key={row.category} className="border-b border-border/50 last:border-0">
-                <th className="py-3 text-left font-medium capitalize">{row.category}</th>
+                <th scope="row" className="py-3 text-left font-medium capitalize">{row.category}</th>
                 <td className="py-3 text-right tabular-nums">{formatCurrency(row.total_amount)}</td>
                 <td className="py-3 text-right tabular-nums">{row.share_pct === null ? "—" : formatPercent(row.share_pct)}</td>
               </tr>
