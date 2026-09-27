@@ -78,9 +78,10 @@ export function ComparisonPage({ dateRange, facets, facetsLoading, onDateRangeCh
         ))}
       </div>
       <BusinessLineIncomeChart
-        data={BUSINESS_TYPES.flatMap((businessType) =>
-          summaries[businessType] ? [summaries[businessType]!] : [],
-        )}
+        data={BUSINESS_TYPES.flatMap((businessType) => {
+          const summary = summaries[businessType];
+          return summary ? [summary] : [];
+        })}
         loading={loading}
       />
     </section>
