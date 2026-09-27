@@ -1,13 +1,10 @@
-import { useEffect, useState } from "react";
-import { ComparisonPage } from "@/components/comparison/comparison-page";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { DashboardNav } from "@/components/dashboard/dashboard-nav";
 import { AlertThresholdInput } from "@/components/dashboard/alert-threshold-input";
 import { AnomalyAlertsTable } from "@/components/dashboard/anomaly-alerts-table";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { DateRangeFilter } from "@/components/dashboard/date-range-filter";
 import { KPIRow } from "@/components/dashboard/kpi-row";
-import { IncomeOutcomeChart } from "@/components/dashboard/income-outcome-chart";
-import { ProfitPercentChart } from "@/components/dashboard/profit-percent-chart";
 import { fetchAlerts, fetchFacets, fetchMovements } from "@/lib/api";
 import {
   type AlertResponse,
@@ -23,6 +20,34 @@ import {
   computeMonthlyData,
   formatMonthRange,
 } from "@/lib/financial-utils";
+
+// Charts and the secondary comparison view pull in Recharts. Load them on demand
+// so the initial dashboard shell becomes interactive without waiting for that bundle.
+const ComparisonPage = lazy(() =>
+  import("@/components/comparison/comparison-page").then((module) => ({
+    default: module.ComparisonPage,
+  })),
+);
+const IncomeOutcomeChart = lazy(() =>
+  import("@/components/dashboard/income-outcome-chart").then((module) => ({
+    default: module.IncomeOutcomeChart,
+  })),
+);
+const ProfitPercentChart = lazy(() =>
+  import("@/components/dashboard/profit-percent-chart").then((module) => ({
+    default: module.ProfitPercentChart,
+  })),
+);
+
+function ChartLoadingFallback() {
+  return (
+    <div
+      role="status"
+      aria-label="Loading dashboard visualizations"
+      className="h-[280px] rounded-xl border border-border bg-card"
+    />
+  );
+}
 
 function App() {
   const [metrics, setMetrics] = useState<KPIMetrics | null>(null);
@@ -64,7 +89,11 @@ function App() {
 
   useEffect(() => {
     const controller = new AbortController();
-    fetchMovements(dateRange, controller.signal)
+    const selectedDateRange: DateRangeValue = {
+      start_date: dateRange.start_date,
+      end_date: dateRange.end_date,
+    };
+    fetchMovements(selectedDateRange, controller.signal)
       .then((movements) => {
         setMetrics(computeKPIs(movements));
         setMonthlyData(computeMonthlyData(movements));
@@ -80,11 +109,15 @@ function App() {
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [dateRange]);
+  }, [dateRange.start_date, dateRange.end_date]);
 
   useEffect(() => {
     const controller = new AbortController();
-    fetchAlerts({ threshold, ...dateRange }, controller.signal)
+    const selectedDateRange: DateRangeValue = {
+      start_date: dateRange.start_date,
+      end_date: dateRange.end_date,
+    };
+    fetchAlerts({ threshold, ...selectedDateRange }, controller.signal)
       .then((result) => {
         setAlerts(result);
         setAlertsThreshold(threshold);
@@ -98,7 +131,7 @@ function App() {
         if (!controller.signal.aborted) setAlertsLoading(false);
       });
     return () => controller.abort();
-  }, [threshold, dateRange]);
+  }, [threshold, dateRange.start_date, dateRange.end_date]);
 
   function handleDateRangeChange(next: DateRangeValue) {
     setLoading(true);
@@ -114,7 +147,10 @@ function App() {
   const isEmpty = !loading && !error && monthlyData.length === 0;
 
   return (
-    <main className="dark min-h-screen bg-background text-foreground">
+    <main
+      className="dark min-h-screen bg-background text-foreground"
+      aria-busy={loading || alertsLoading || facetsLoading}
+    >
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-8">
           <DashboardHeader
@@ -123,12 +159,14 @@ function App() {
           />
 
           {view === "comparison" ? (
-            <ComparisonPage
-              dateRange={dateRange}
-              facets={facets}
-              facetsLoading={facetsLoading}
-              onDateRangeChange={handleDateRangeChange}
-            />
+            <Suspense fallback={<ChartLoadingFallback />}>
+              <ComparisonPage
+                dateRange={dateRange}
+                facets={facets}
+                facetsLoading={facetsLoading}
+                onDateRangeChange={handleDateRangeChange}
+              />
+            </Suspense>
           ) : (
             <DateRangeFilter
               value={dateRange}
@@ -139,13 +177,13 @@ function App() {
           )}
 
           {view === "overview" && error ? (
-            <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive-foreground">
+            <div role="alert" className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive-foreground">
               {error}
             </div>
           ) : null}
 
           {view === "overview" && isEmpty ? (
-            <div className="rounded-lg border border-border bg-secondary p-4 text-sm text-secondary-foreground">
+            <div role="status" className="rounded-lg border border-border bg-secondary p-4 text-sm text-secondary-foreground">
               No movements in the selected range.
             </div>
           ) : null}
@@ -158,8 +196,10 @@ function App() {
             aria-label="Financial charts"
             className="grid grid-cols-1 gap-4 xl:grid-cols-2"
           >
-            <IncomeOutcomeChart data={monthlyData} loading={loading} />
-            <ProfitPercentChart data={monthlyData} loading={loading} />
+            <Suspense fallback={<ChartLoadingFallback />}>
+              <IncomeOutcomeChart data={monthlyData} loading={loading} />
+              <ProfitPercentChart data={monthlyData} loading={loading} />
+            </Suspense>
           </section> : null}
 
           {view === "overview" ? <section aria-label="Spending anomalies" className="flex flex-col gap-4">

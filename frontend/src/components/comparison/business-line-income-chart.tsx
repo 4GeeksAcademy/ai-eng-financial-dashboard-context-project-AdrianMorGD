@@ -44,6 +44,7 @@ export function BusinessLineIncomeChart({ data, loading }: BusinessLineIncomeCha
         {loading ? <Skeleton className="h-[280px] w-full" /> : data.every((item) => item.total_income === 0) ? (
           <div className="flex h-[280px] items-center justify-center text-sm text-muted-foreground">No income in the selected range.</div>
         ) : (
+          <div role="img" aria-label="Bar chart comparing income for B2B and B2C">
           <ResponsiveContainer width="100%" height={280}>
             <BarChart data={data} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
@@ -53,6 +54,7 @@ export function BusinessLineIncomeChart({ data, loading }: BusinessLineIncomeCha
               <Bar dataKey="total_income" name="Income" fill="var(--chart-income)" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
+          </div>
         )}
       </CardContent>
     </Card>

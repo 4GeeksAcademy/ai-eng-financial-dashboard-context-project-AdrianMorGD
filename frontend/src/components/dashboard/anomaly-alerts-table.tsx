@@ -49,6 +49,7 @@ export function AnomalyAlertsTable({
       <CardContent>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
+            <caption className="sr-only">Spending anomalies by period</caption>
             <thead>
               <tr className="border-b border-border text-xs text-muted-foreground">
                 {COLUMNS.map((column, index) => (
